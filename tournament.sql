@@ -8,14 +8,24 @@ CREATE DATABASE tournament;
 CREATE SCHEMA swiss_tournament;
 
 
+-- 'country' stores the country names belonging to various teams and tournaments.
+CREATE TABLE swiss_tournament.country ( 
+        id                   serial  NOT NULL,
+        name                 char(60)  NOT NULL,
+        CONSTRAINT pk_country PRIMARY KEY ( id )
+ );
+
+
 -- 'tournament' table stores the information regarding a tournament in its begining.
 CREATE TABLE swiss_tournament.tournament ( 
         id                   serial  NOT NULL,
         start_date           date DEFAULT current_date ,
         name                 varchar(100)  ,
         place                char(50) DEFAULT 'India' ,
-        CONSTRAINT pk_tournament PRIMARY KEY ( id )
- );
+        origin_country       integer  NOT NULL,
+        CONSTRAINT pk_tournament PRIMARY KEY ( id ),
+        CONSTRAINT fk_tournament_country FOREIGN KEY ( origin_country ) REFERENCES swiss_tournament.country( id ) ON DELETE RESTRICT ON UPDATE RESTRICT
+);
 
 
 
@@ -33,12 +43,7 @@ CREATE TABLE swiss_tournament.tournament_stats (
 CREATE INDEX idx_tournament_stats ON swiss_tournament.tournament_stats ( winner );
 
 
--- 'country' stores the country names belonging to various teams
-CREATE TABLE swiss_tournament.country ( 
-        id                   serial  NOT NULL,
-        name                 char(60)  NOT NULL,
-        CONSTRAINT pk_country PRIMARY KEY ( id )
- );
+
 
 
 
