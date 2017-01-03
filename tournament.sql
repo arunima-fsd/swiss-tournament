@@ -117,13 +117,29 @@ CREATE INDEX idx_match_schedule ON swiss_tournament.match_schedule ( tournament_
 CREATE TABLE swiss_tournament."match" ( 
         id                   integer  NOT NULL,
         winner               integer DEFAULT NULL ,
-        is_draw              bool DEFAULT False ,
+        is_draw              bool DEFAULT False NOT NULL,
         CONSTRAINT pk_match PRIMARY KEY ( id ),
         CONSTRAINT fk_match_match_schedule FOREIGN KEY ( id ) REFERENCES swiss_tournament.match_schedule( id ) ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT fk_match_player_info FOREIGN KEY ( winner ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE
+        CONSTRAINT is_draw CHECK ( is_draw = CASE WHEN (winner IS NULL) THEN true ELSE false END ) 
 );
 
 CREATE INDEX idx_match ON swiss_tournament."match" ( winner );
+
+
+
+CREATE MATERIALIZED VIEW standings
+AS
+SELECT ps.id, pi.first_name, pi.last_name, pi.team_id, t.tournament_id, ps.wins + ps.losses + ps.draws as matches, ps.wins, ps.losses, ps.draws, ps.total_points
+FROM swiss_tournament.player_stats ps 
+        INNER JOIN swiss_tournament.player_info pi ON ( ps.id = pi.id  )  
+                INNER JOIN swiss_tournament.teams t ON ( pi.team_id = t.id  )  
+ORDER BY total_points DESC
+WITH [NO] DATA;
+
+
+
+
 
 
 
