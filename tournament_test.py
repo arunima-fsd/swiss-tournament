@@ -6,6 +6,7 @@
 # If you do add any of the extra credit options, be sure to add/modify these test cases
 # as appropriate to account for your module's added functionality.
 
+import datetime
 from tournament import *
 
 def testCount():
@@ -16,31 +17,47 @@ def testCount():
     """
     deleteMatches()
     deletePlayers()
-    c = countPlayers()
+    country_id = registerCountry("Canada")
+    start_date = datetime.date.today()
+    tournament_id = registerTournament('Test tournament', start_date , country_id)
+    c = countPlayers(tournament_id)
+    
     if c == '0':
         raise TypeError(
             "countPlayers should return numeric zero, not string '0'.")
     if c != 0:
         raise ValueError("After deletion, countPlayers should return zero.")
     print "1. countPlayers() returns 0 after initial deletePlayers() execution."
-    registerPlayer("Chandra Nalaar")
-    c = countPlayers()
+    
+    
+    team_id = registerTeam('Test Team 1', tournament_id, country_id)
+    registerPlayer("Chandra Nalaar", team_id)
+    c = countPlayers(tournament_id)
+    
     if c != 1:
         raise ValueError(
             "After one player registers, countPlayers() should be 1. Got {c}".format(c=c))
     print "2. countPlayers() returns 1 after one player is registered."
-    registerPlayer("Jace Beleren")
-    c = countPlayers()
+    
+    
+    team_id = registerTeam('Test Team 2', tournament_id, country_id)
+    registerPlayer("Jace Beleren", team_id)
+    c = countPlayers(tournament_id)
     if c != 2:
         raise ValueError(
             "After two players register, countPlayers() should be 2. Got {c}".format(c=c))
     print "3. countPlayers() returns 2 after two players are registered."
+    
     deletePlayers()
-    c = countPlayers()
+    c = countPlayers(tournament_id)
     if c != 0:
         raise ValueError(
             "After deletion, countPlayers should return zero.")
     print "4. countPlayers() returns zero after registered players are deleted.\n5. Player records successfully deleted."
+    
+    
+    
+    
 
 def testStandingsBeforeMatches():
     """
@@ -67,6 +84,11 @@ def testStandingsBeforeMatches():
         raise ValueError("Registered players' names should appear in standings, "
                          "even if they have no matches played.")
     print "6. Newly registered players appear in the standings with no matches."
+    
+    
+    
+    
+    
 
 def testReportMatches():
     """
@@ -102,6 +124,10 @@ def testReportMatches():
         if w != 0:
             raise ValueError("After deleting matches, players should have zero wins recorded.")
     print "8. After match deletion, player standings are properly reset.\n9. Matches are properly deleted."
+    
+    
+    
+
 
 def testPairings():
     """
