@@ -21,30 +21,10 @@ CREATE TABLE swiss_tournament.tournament (
         id                   serial  NOT NULL,
         start_date           date DEFAULT current_date ,
         name                 varchar(100)  ,
-        place                char(50) DEFAULT 'India' ,
         origin_country       integer  NOT NULL,
         CONSTRAINT pk_tournament PRIMARY KEY ( id ),
-        CONSTRAINT fk_tournament_country FOREIGN KEY ( origin_country ) REFERENCES swiss_tournament.country( id ) ON DELETE RESTRICT ON UPDATE RESTRICT
+        CONSTRAINT fk_tournament_country FOREIGN KEY ( origin_country ) REFERENCES swiss_tournament.country( id ) ON DELETE RESTRICT ON UPDATE CASCADE
 );
-
-
-
--- 'tournament_stats' table stores the short statistics after each tournament gets over.
-CREATE TABLE swiss_tournament.tournament_stats ( 
-        id                   integer  NOT NULL,
-        end_date             date DEFAULT current_date ,
-        winner               integer  NOT NULL,
-        CONSTRAINT pk_tournament_stats PRIMARY KEY ( id ),
-        CONSTRAINT fk_tournament_stats FOREIGN KEY ( winner ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE,
-        CONSTRAINT fk_tournament_stats_tournament FOREIGN KEY ( id ) REFERENCES swiss_tournament.tournament( id )
-        
- );
-
-CREATE INDEX idx_tournament_stats ON swiss_tournament.tournament_stats ( winner );
-
-
-
-
 
 
 -- 'teams' table constitutes of the basic information related to each time. I assumed different sets of team participates in each tornament for 
@@ -63,6 +43,7 @@ CREATE INDEX idx_team_info ON swiss_tournament.teams ( tournament_id );
 
 
 
+
 -- 'player_info' table reflects the basic information about a player at the time of registration in the tournament.
 CREATE TABLE swiss_tournament.player_info ( 
         id                   serial  NOT NULL,
@@ -74,6 +55,22 @@ CREATE TABLE swiss_tournament.player_info (
  );
 
 CREATE INDEX idx_player_info_a ON swiss_tournament.player_info ( team_id );
+
+
+-- 'tournament_stats' table stores the short statistics after each tournament gets over.
+CREATE TABLE swiss_tournament.tournament_stats ( 
+        id                   integer  NOT NULL,
+        end_date             date DEFAULT current_date ,
+        winner               integer  NOT NULL,
+        CONSTRAINT pk_tournament_stats PRIMARY KEY ( id ),
+        CONSTRAINT fk_tournament_stats FOREIGN KEY ( winner ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_tournament_stats_tournament FOREIGN KEY ( id ) REFERENCES swiss_tournament.tournament( id )
+        
+ );
+
+CREATE INDEX idx_tournament_stats ON swiss_tournament.tournament_stats ( winner );
+
+
 
 
 
@@ -100,6 +97,7 @@ CREATE TABLE swiss_tournament.match_schedule (
         second_player        integer  NOT NULL,
         match_date           date  ,
         round                integer  ,
+        isfinished           bool DEFAULT False ,
         CONSTRAINT pk_match_schedule PRIMARY KEY ( id ),
         CONSTRAINT fk_match_schedule_player_info FOREIGN KEY ( first_player ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT fk_match_schedule_player_info_a FOREIGN KEY ( second_player ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -126,4 +124,10 @@ CREATE TABLE swiss_tournament."match" (
 );
 
 CREATE INDEX idx_match ON swiss_tournament."match" ( winner );
+
+
+
+
+
+
 
