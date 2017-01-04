@@ -117,10 +117,12 @@ CREATE INDEX idx_match_schedule ON swiss_tournament.match_schedule ( tournament_
 CREATE TABLE swiss_tournament."match" ( 
         id                   integer  NOT NULL,
         winner               integer DEFAULT NULL ,
+        loser                integer DEFAULT NULL,
         is_draw              bool DEFAULT False NOT NULL,
         CONSTRAINT pk_match PRIMARY KEY ( id ),
         CONSTRAINT fk_match_match_schedule FOREIGN KEY ( id ) REFERENCES swiss_tournament.match_schedule( id ) ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT fk_match_player_info FOREIGN KEY ( winner ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_match_player_info_ FOREIGN KEY ( loser ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT is_draw CHECK ( is_draw = CASE WHEN (winner IS NULL) THEN true ELSE false END ) 
 );
 
@@ -139,40 +141,40 @@ WITH NO DATA;
 
 
 
-CREATE OR REPLACE function refresh_mat_view()
-RETURNS TRIGGER
-language plpgsql
-AS
-$$
-BEGIN
-    refresh materialized view swiss_tournament.player_standings;
-    return null;
-END
-$$;
+CREATE OR REPLACE FUNCTION refresh_mat_view()
+ RETURNS TRIGGER
+  LANGUAGE plpgsql
+   AS
+    $$
+     BEGIN
+       refresh materialized view swiss_tournament.player_standings;
+       return null;
+     END
+   $$;
 
 
 
 CREATE TRIGGER refresh_mat_view
-AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
-ON  swiss_tournament.player_stats
-FOR EACH STATEMENT
-EXECUTE PROCEDURE refresh_mat_view();
+  AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
+    ON  swiss_tournament.player_stats
+      FOR EACH STATEMENT
+        EXECUTE PROCEDURE refresh_mat_view();
 
 
 
 CREATE TRIGGER refresh_mat_view_a
-AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
-ON  swiss_tournament.player_info
-FOR EACH STATEMENT
-EXECUTE PROCEDURE refresh_mat_view();
+  AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
+    ON  swiss_tournament.player_info
+      FOR EACH STATEMENT
+        EXECUTE PROCEDURE refresh_mat_view();
 
 
 
 CREATE TRIGGER refresh_mat_view_b
-AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
-ON  swiss_tournament.teams
-FOR EACH STATEMENT
-EXECUTE PROCEDURE refresh_mat_view();
+  AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
+    ON  swiss_tournament.teams
+      FOR EACH STATEMENT
+        EXECUTE PROCEDURE refresh_mat_view();
 
 
 
