@@ -157,25 +157,38 @@ def registerPlayer(name, team_id):
     Args:
       name: the player's full name (need not be unique).
     """
+    
     full_name = name.split()
     first_name = full_name[0]
     if len(full_name) == 2:
         last_name = full_name[1]
-        query = "INSERT INTO swiss_tournament.player_info( first_name, last_name, team_id) VALUES (  %s, %s, %s );"
+        query = "INSERT INTO swiss_tournament.player_info( first_name, last_name, team_id) VALUES (  %s, %s, %s ) RETURNING id;"
         data = ( first_name, last_name, team_id)
     else:
-        query = "INSERT INTO swiss_tournament.player_info( first_name, team_id) VALUES (  %s, %s);"
+        query = "INSERT INTO swiss_tournament.player_info( first_name, team_id) VALUES (  %s, %s) RETURNING id;"
         data = ( first_name, team_id)
     
     conn = connect()
     cur = conn.cursor()
     cur.execute(query, data)
+    player_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
     conn.close()
+    
+    
+    query = "INSERT INTO swiss_tournament.player_stats( id, wins, losses, draws, total_points) VALUES (%s, %s, %s, %s, %s);"
+    data = (player_id, 0, 0, 0, 0)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    conn.commit()
+    cur.close()
+    conn.close()    
+    
 
 
-def playerStandings():
+def playerStandings(tournament_id):
     """Returns a list of the players and their win records, sorted by wins.
 
     The first entry in the list should be the player in first place, or a player
@@ -188,15 +201,115 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    
+    conn = connect()
+    cur = conn.cursor()
+    query = """ SELECT id, first_name, last_name, wins, matches 
+                FROM swiss_tournament.player_standings
+                WHERE tournament_id = %s """
+    data = (tournament_id,)
+    cur.execute(query, data)
+    players_list = []
+    for row in cur.fetchall():
+        players_list.append(row)
+    conn.close()
+    return players_list
+    
+    
+    
 
 
-def reportMatch(winner, loser):
+def reportMatch(winner, loser, matchId):
     """Records the outcome of a single match between two players.
 
     Args:
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
+      
+    Here, two cases arises, first when match has got the result and second
+    when its draw. In each case we are updating two tables namely 'player_stats' 
+    and 'match'. I assume that whenever a match is draw winner and loser arguments 
+    are passed as NULL. 
+     
+    We don't need a tournament id here as there is no chance that for two tournaments
+    there is one player with same id.
     """
+    if(winner is not NULL):
+        #Match is not draw therefore the 'match' relation's 'is_draw'
+        #column is automatically set to False 
+        
+        query = """INSERT INTO swiss_tournament."match"
+	         ( id, winner) VALUES ( %s, %s);"""
+        
+        data = (matchId, winner)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        conn.commit()
+        cur.close()
+        conn.close()        
+        
+        
+        query = """UPDATE swiss_tournament.player_stats
+        SET  wins = CASE 
+               WHEN id = %s THEN wins + 1
+               WHEN id = %s THEN wins
+             END,
+             losses = CASE
+               WHEN id = %s THEN losses
+               WHEN id = %s THEN losses +1
+             END,
+             total_points = CASE
+               WHEN id = %s THEN  total_points + 3 
+               WHEN id = %s THEN total_points
+             END
+        WHERE id IN(%s, %s);
+        """        
+        data = (winner, loser, winner, loser, winner, loser, winner, loser)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        conn.commit()
+        cur.close()
+        conn.close()
+    else:
+        
+        # In case, match is draw then 'isDraw' column of 'match' relation
+        # will automaticaly be set to true and there is no winner
+        # hence, winner is null
+        
+        query = """INSERT INTO swiss_tournament."match"
+                         ( id, winner) VALUES ( %s, %s);"""
+                
+        data = (matchId, winner)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        conn.commit()
+        cur.close()
+        conn.close()        
+        
+        query = """UPDATE swiss_tournament.player_stats
+                SET  draws = CASE 
+                       WHEN id = %s THEN draws + 1
+                       WHEN id = %s THEN draws + 1
+                     END,
+                     total_points = CASE
+                       WHEN id = %s THEN total_points + 1 
+                       WHEN id = %s THEN total_points + 1
+                    END
+                WHERE id IN(%s, %s);
+                """        
+        data = (winner, loser, winner, loser, winner, loser, winner, loser)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        conn.commit()
+        cur.close()
+        conn.close()        
+        
+    
+    
  
  
 def swissPairings():
@@ -214,5 +327,11 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+
+
+
+def totalPoints(wins, draws):
+    total = (wins * 3) + (draws * 1)
+    return total
 
 
