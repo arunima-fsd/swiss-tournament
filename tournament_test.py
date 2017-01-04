@@ -15,7 +15,7 @@ def testCount():
              player count after 1 and 2 players registered,
              player count after players deleted.
     """
-    deleteMatches()
+    deleteAllMatches()
     deletePlayers()
     country_id = registerCountry("India")
     start_date = datetime.date.today()
@@ -67,7 +67,7 @@ def testStandingsBeforeMatches():
     Test to ensure players are properly represented in standings prior
     to any matches being reported.
     """
-    deleteMatches()
+    deleteAllMatches()
     deletePlayers()
     country_id = registerCountry("India")
     start_date = datetime.date.today()
@@ -106,31 +106,54 @@ def testReportMatches():
     Test that matches are reported properly.
     Test to confirm matches are deleted properly.
     """
-    deleteMatches()
+    deleteAllMatches()
     deletePlayers()
-    registerPlayer("Bruno Walton")
-    registerPlayer("Boots O'Neal")
-    registerPlayer("Cathy Burton")
-    registerPlayer("Diane Grant")
-    standings = playerStandings()
+    deleteTeams()
+    deleteTournament()
+    deleteCountry()
+    country_id = registerCountry("India")
+    start_date = datetime.date.today()
+    tournament_id = registerTournament('Test', start_date , country_id) 
+    team_a = registerTeam('Test Team 2', tournament_id, country_id)
+    team_b = registerTeam('Test Team 3', tournament_id, country_id)    
+    
+    registerPlayer("Bruno Walton", team_a)
+    registerPlayer("Boots O'Neal", team_a)
+    registerPlayer("Cathy Burton", team_b)
+    registerPlayer("Diane Grant", team_b)
+    
+    standings = playerStandings(tournament_id)
     [id1, id2, id3, id4] = [row[0] for row in standings]
-    reportMatch(id1, id2)
-    reportMatch(id3, id4)
-    standings = playerStandings()
-    for (i, n, w, m) in standings:
+    
+    match_id1 = registerMatch(tournament_id, id1, id2, start_date)
+    match_id2 = registerMatch(tournament_id, id3, id4, start_date)
+    
+    
+    reportMatch(id1, id2, match_id1)
+    reportMatch(id3, id4, match_id2)
+    
+    standings = playerStandings(tournament_id)
+    
+    for (i, fn, ln, w, m) in standings:
         if m != 1:
             raise ValueError("Each player should have one match recorded.")
         if i in (id1, id3) and w != 1:
             raise ValueError("Each match winner should have one win recorded.")
         elif i in (id2, id4) and w != 0:
             raise ValueError("Each match loser should have zero wins recorded.")
+        
     print "7. After a match, players have updated standings."
-    deleteMatches()
-    standings = playerStandings()
+    
+    
+    deleteMatches(tournament_id, match_id1)
+    deleteMatches(tournament_id, match_id2)
+    standings = playerStandings(tournament_id)
+    
     if len(standings) != 4:
         raise ValueError("Match deletion should not change number of players in standings.")
-    for (i, n, w, m) in standings:
+    for (i, fn, ln, w, m) in standings:
         if m != 0:
+            
             raise ValueError("After deleting matches, players should have zero matches recorded.")
         if w != 0:
             raise ValueError("After deleting matches, players should have zero wins recorded.")
@@ -144,7 +167,7 @@ def testPairings():
     """
     Test that pairings are generated properly both before and after match reporting.
     """
-    deleteMatches()
+    deleteAllMatches()
     deletePlayers()
     registerPlayer("Twilight Sparkle")
     registerPlayer("Fluttershy")
