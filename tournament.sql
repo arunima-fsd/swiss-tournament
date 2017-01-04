@@ -120,7 +120,7 @@ CREATE TABLE swiss_tournament."match" (
         is_draw              bool DEFAULT False NOT NULL,
         CONSTRAINT pk_match PRIMARY KEY ( id ),
         CONSTRAINT fk_match_match_schedule FOREIGN KEY ( id ) REFERENCES swiss_tournament.match_schedule( id ) ON DELETE CASCADE ON UPDATE CASCADE,
-        CONSTRAINT fk_match_player_info FOREIGN KEY ( winner ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE
+        CONSTRAINT fk_match_player_info FOREIGN KEY ( winner ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT is_draw CHECK ( is_draw = CASE WHEN (winner IS NULL) THEN true ELSE false END ) 
 );
 
@@ -128,16 +128,51 @@ CREATE INDEX idx_match ON swiss_tournament."match" ( winner );
 
 
 
-CREATE MATERIALIZED VIEW standings
+CREATE MATERIALIZED VIEW swiss_tournament.player_standings
 AS
 SELECT ps.id, pi.first_name, pi.last_name, pi.team_id, t.tournament_id, ps.wins + ps.losses + ps.draws as matches, ps.wins, ps.losses, ps.draws, ps.total_points
 FROM swiss_tournament.player_stats ps 
         INNER JOIN swiss_tournament.player_info pi ON ( ps.id = pi.id  )  
                 INNER JOIN swiss_tournament.teams t ON ( pi.team_id = t.id  )  
 ORDER BY total_points DESC
-WITH [NO] DATA;
+WITH NO DATA;
 
 
+
+CREATE OR REPLACE function refresh_mat_view()
+RETURNS TRIGGER
+language plpgsql
+AS
+$$
+BEGIN
+    refresh materialized view swiss_tournament.player_standings;
+    return null;
+END
+$$;
+
+
+
+CREATE TRIGGER refresh_mat_view
+AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
+ON  swiss_tournament.player_stats
+FOR EACH STATEMENT
+EXECUTE PROCEDURE refresh_mat_view();
+
+
+
+CREATE TRIGGER refresh_mat_view_a
+AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
+ON  swiss_tournament.player_info
+FOR EACH STATEMENT
+EXECUTE PROCEDURE refresh_mat_view();
+
+
+
+CREATE TRIGGER refresh_mat_view_b
+AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
+ON  swiss_tournament.teams
+FOR EACH STATEMENT
+EXECUTE PROCEDURE refresh_mat_view();
 
 
 
