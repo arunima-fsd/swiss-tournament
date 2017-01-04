@@ -44,19 +44,127 @@ def deletePlayers():
     
 
 
-def deleteMatches():
+def deleteMatches(tournamentId, matchId = None):
     """Remove all the match records from the database. Deleting this automatically deletes all the records in 
-    'match' table as per the cascade deletion """
+    'match' table as per the cascade deletion 
+    ARGS:
+    tournamentId: used to delete the matches from a particular tournament(mandatory)
+    matchId: used to delete a particular match"""
     
+    if matchId is not None:
+        # In this case, user wants to delete one particular match
+        # the tournament_id passed in this argument is of no use.
+        # This case again has two other cases when the match is draw
+        # and when the match has a clear winner.
+        
+        query = "SELECT is_draw FROM swiss_tournament.match where id = %s;"
+        data = (matchId,)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        is_draw = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        conn.close() 
+        
+        if is_draw:
+            # match draw
+            query = """SELECT first_player, second_player
+                       FROM
+	               swiss_tournament.match_schedule e
+                       WHERE id = %s;"""
+            conn = connect()
+            cur = conn.cursor()
+            cur.execute(query, data)
+            row = cur.fetchone()
+            first_player = row[0]
+            second_player = row[1]
+            conn.commit()
+            cur.close()
+            conn.close() 
+            
+            query = """UPDATE swiss_tournament.player_stats SET draws = draws - 1,
+                       total_points = total_points - 1
+                       WHERE id IN(%s, %s);"""
+            data = (first_player, second_player)
+            cur = conn.cursor()
+            cur.execute(query, data)
+            conn.commit()
+            cur.close()
+            conn.close()            
+        else:
+            # clear winner
+            query = """SELECT winner, loser
+                       FROM swiss_tournament."match" e
+                       WHERE id = %s;"""
+            data = (matchId,)
+            conn = connect()
+            cur = conn.cursor()
+            cur.execute(query, data)
+            row = cur.fetchone()
+            winner = row[0]
+            loser = row[1]
+            conn.commit()
+            cur.close()
+            conn.close()
+            conn = connect()
+            query = """UPDATE swiss_tournament.player_stats
+                       SET  wins = CASE 
+                       WHEN id = %s THEN wins - 1
+                       WHEN id = %s THEN wins
+                       END,
+                       losses = CASE
+                       WHEN id = %s THEN losses
+                       WHEN id = %s THEN losses - 1
+                       END,
+                       total_points = CASE
+                       WHEN id = %s THEN  total_points - 3 
+                       WHEN id = %s THEN total_points
+                       END
+                       WHERE id IN(%s, %s);
+                    """
+            data = (winner, loser, winner, loser, winner, loser, winner, loser)
+            cur = conn.cursor()
+            cur.execute(query, data)
+            conn.commit()
+            cur.close()
+            conn.close() 
+    else:
+        query = """UPDATE swiss_tournament.player_stats SET wins = 0,
+                    losses = 0, draws = 0, total_points = 0
+                       FROM   swiss_tournament.player_stats ps 
+                         INNER JOIN swiss_tournament.player_info pi ON ( ps.id = pi.id  )  
+                           INNER JOIN swiss_tournament.teams t ON ( pi.team_id = t.id  )  
+                              WHERE tournament_id = %s;"""
+        data = (tournamentId,)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        conn.commit()
+        cur.close()
+        conn.close()        
+        
+        conn = connect()
+        cur = conn.cursor()
+        query = "DELETE FROM swiss_tournament.match_schedule WHERE tournament_id = %s;"
+        data = (tournamentId,)
+        cur.execute(query, data)
+        conn.commit()
+        cur.close()
+        conn.close()
+
+
+def deleteAllMatches():
+    """ Delete all the match records irrespective of particular tournament.
+        This in return cascade delete 'match' relation's rows too. """
     conn = connect()
     cur = conn.cursor()
-    cur.execute("DELETE FROM swiss_tournament.match_schedule;")
+    query = "DELETE FROM swiss_tournament.match_schedule;"
+    cur.execute(query)
     conn.commit()
     cur.close()
-    conn.close()
-
-
-
+    conn.close()    
+    
 
 
 def deleteCountry():
@@ -187,6 +295,25 @@ def registerPlayer(name, team_id):
     conn.close()    
     
 
+def registerMatch(tournament_id, first_player, second_player, match_date):
+    """ Registers a match in 'match_schedule' relation. This query 
+     just registers a match its occurence and results is recorded in 'match' relation
+     which is updated in reportMatch() function."""
+    
+    query = """INSERT INTO swiss_tournament.match_schedule
+	(tournament_id, first_player, second_player, match_date) VALUES ( %s, %s, %s, %s) RETURNING id;"""
+    data = (tournament_id, first_player, second_player, match_date)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    match_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return match_id
+    
+    
+
 
 def playerStandings(tournament_id):
     """Returns a list of the players and their win records, sorted by wins.
@@ -234,14 +361,14 @@ def reportMatch(winner, loser, matchId):
     We don't need a tournament id here as there is no chance that for two tournaments
     there is one player with same id.
     """
-    if(winner is not NULL):
+    if(winner is not None):
         #Match is not draw therefore the 'match' relation's 'is_draw'
         #column is automatically set to False 
         
         query = """INSERT INTO swiss_tournament."match"
-	         ( id, winner) VALUES ( %s, %s);"""
+	         ( id, winner, loser) VALUES ( %s, %s, %s);"""
         
-        data = (matchId, winner)
+        data = (matchId, winner, loser)
         conn = connect()
         cur = conn.cursor()
         cur.execute(query, data)
@@ -279,9 +406,9 @@ def reportMatch(winner, loser, matchId):
         # hence, winner is null
         
         query = """INSERT INTO swiss_tournament."match"
-                         ( id, winner) VALUES ( %s, %s);"""
+                         ( id, winner) VALUES ( %s);"""
                 
-        data = (matchId, winner)
+        data = (matchId)
         conn = connect()
         cur = conn.cursor()
         cur.execute(query, data)
