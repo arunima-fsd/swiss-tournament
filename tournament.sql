@@ -57,30 +57,16 @@ CREATE TABLE swiss_tournament.player_info (
 CREATE INDEX idx_player_info_a ON swiss_tournament.player_info ( team_id );
 
 
--- 'tournament_stats' table stores the short statistics after each tournament gets over.
-CREATE TABLE swiss_tournament.tournament_stats ( 
-        id                   integer  NOT NULL,
-        end_date             date DEFAULT current_date ,
-        winner               integer  NOT NULL,
-        CONSTRAINT pk_tournament_stats PRIMARY KEY ( id ),
-        CONSTRAINT fk_tournament_stats FOREIGN KEY ( winner ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE,
-        CONSTRAINT fk_tournament_stats_tournament FOREIGN KEY ( id ) REFERENCES swiss_tournament.tournament( id )
-        
- );
-
-CREATE INDEX idx_tournament_stats ON swiss_tournament.tournament_stats ( winner );
-
-
 
 
 
 -- 'player_stats' shows the performance of each player in the tournament. This table needs to be updated after each match.
 CREATE TABLE swiss_tournament.player_stats ( 
         id                   integer  NOT NULL,
-        wins                 integer DEFAULT 0 ,
-        losses               integer DEFAULT 0 ,
-        draws                integer DEFAULT 0 ,
-        total_points         integer DEFAULT 0 ,
+        wins                 integer DEFAULT 0 NOT NULL,
+        losses               integer DEFAULT 0 NOT NULL,
+        draws                integer DEFAULT 0 NOT NULL,
+        total_points         integer DEFAULT 0 NOT NULL,
         CONSTRAINT pk_player_stats PRIMARY KEY ( id ),
         CONSTRAINT fk_player_stats_player_info FOREIGN KEY ( id ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE
 
