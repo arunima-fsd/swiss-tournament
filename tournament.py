@@ -12,25 +12,67 @@ def connect():
 
 
 
-def deleteTournament():
-    """Remove all the tournaments records"""
+def deleteTournament(tournamentId = None):
+    """Remove all or some tournaments records"""
+    if tournamentId:
+        query = """DELETE FROM swiss_tournament.tournament
+                           WHERE id = %s;"""
+        data = (tournamentId,)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        conn.commit()
+        cur.close()
+        conn.close()
+    else:
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM swiss_tournament.tournament;")
+        conn.commit()
+        cur.close()
+        conn.close()        
+        
     
+
+
+
+def deleteTeams(tournamentId = None):
+    """Remove all or some team records"""
+    
+    if tournamentId:
+        query = """DELETE FROM swiss_tournament.teams
+                   WHERE tournament_id = %s;"""
+        data = (tournamentId,)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        conn.commit()
+        cur.close()
+        conn.close()  
+    else:
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM swiss_tournament.teams;")
+        conn.commit()
+        cur.close()
+        conn.close()        
+        
+    
+def deleteOneTeam(teamId):
+    query = """DELETE FROM swiss_tournament.teams
+               WHERE id = %s;"""
+    data = (teamId,)
     conn = connect()
     cur = conn.cursor()
-    cur.execute("DELETE FROM swiss_tournament.tournament;")
+    cur.execute(query, data)
     conn.commit()
     cur.close()
-    conn.close()
+    conn.close()    
     
-def deleteTeams():
-    """Remove all the teams records"""
     
-    conn = connect()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM swiss_tournament.teams;")
-    conn.commit()
-    cur.close()
-    conn.close()
+    
+    
+
     
 def deletePlayers():
     """Remove all the player records from the database."""
@@ -168,7 +210,8 @@ def deleteAllMatches():
 
 
 def deleteCountry():
-    """Removes all the country details. Country id is foreign key to two tables 'Tournament' and 'Team' 
+    """Removes all the country details. Country id is foreign key to 
+    two tables 'Tournament' and 'Team'.
     Deletion is only possible when there is no data in those table"""
     
     conn = connect()
@@ -179,6 +222,9 @@ def deleteCountry():
     conn.close()    
     
 
+
+
+# ##############################################################################
 
 def countPlayers(tournamentId):
     """Returns the number of players currently registered."""
@@ -211,28 +257,34 @@ def registerCountry(name):
     
     conn = connect()
     cur = conn.cursor()
-    cur.execute()
+    cur.execute(query)
     country_list = cur.fetchall()
     cur.close()
     conn.close()
     
-    countryExists = False
-    for row in coutry_list:
-        if name == row[0]:
-            countryExists = True
-            break
+    if country_list:
+        countryExists = False
+        for row in country_list:
+            if name == row[0]:
+                countryExists = True
+                break
+        
     if countryExists:
         query = """SELECT id
                    FROM swiss_tournament.country y
                    WHERE name = %s; """
         data = (lower(name.title()),)
+        conn = connect()
+        cur = conn.cursor()        
         cur.execute(query, data)
         country_id = cur.fetchone()[0]
         conn.commit()
-        conn.close()        
+        conn.close() 
     else:
         query = "INSERT INTO swiss_tournament.country( name) VALUES ( %s ) RETURNING id;"
-        cur.execute(query, (name.title(), ))
+        conn = connect()
+        cur = conn.cursor()        
+        cur.execute(query, (name.title(),))
         country_id = cur.fetchone()[0]
         conn.commit()
         conn.close()        
@@ -584,6 +636,22 @@ def displayTournaments():
     conn.close() 
     return id_list 
     
+    
+def displayTeams(tournamentId):
+    query = """SELECT t.id, t.name, c1.name
+               FROM swiss_tournament.teams t 
+               INNER JOIN swiss_tournament.country c1 
+               ON ( t.country = c1.id  )  
+               WHERE tournament_id = %s"""
+    data = (tournamentId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    team_list = cur.fetchall()
+    conn.commit()
+    cur.close()
+    conn.close() 
+    return team_list
     
     
 
