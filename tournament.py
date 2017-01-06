@@ -455,48 +455,80 @@ def swissPairings( tournamentId):
         name2: the second player's name
     """
     
+    # This database design requires to have any even number of teams
+    # with equal amount of players without which pairing can not be done.
+    # The below query obtains the total number of teams.
     query = """SELECT count(id)
-               FROM swiss_tournament.player_standings
-	       WHERE tournament_id = %s
-	       GROUP BY team_id;"""
-    data = (tournamentId,)
+             FROM swiss_tournament.teams s
+             WHERE tournament_id = %s;"""
+    data = (tournamentId)
     conn = connect()
     cur = conn.cursor()
     cur.execute(query, data)
-    
-    team_counts = []
-    for row in cur.fetchall():
-        team_counts.append(row[0])
-        
+    count = cur.fetone()[0][0]
     cur.close()
-    conn.close()
+    conn.close() 
     
-    if all_same(team_counts):
-        query = """ SELECT id, first_name, last_name, team_id 
-                    FROM swiss_tournament.player_standings
-                    WHERE tournament_id = %s"""
+    if (int(count) % 2 == 0):
+        # If there are even number of teams. Then we need to check if 
+        # there are equal number of players in each team. The following
+        # query fetches the number of players in each team.
+        
+        query = """SELECT count(id)
+                       FROM swiss_tournament.player_standings
+                       WHERE tournament_id = %s
+                       GROUP BY team_id;"""
         data = (tournamentId,)
         conn = connect()
         cur = conn.cursor()
         cur.execute(query, data)
-        players = []
+        
+        team_counts = []
         for row in cur.fetchall():
-            players.append(list(row))
-            
-        pairings = []
-        players_ids = []
-        for index, row in enumerate(players):
-            if(row[0] not in players_ids):
-                for item in players[index+1:]:
-                    if(row[2] != item[2] and (item[0] not in players_ids)):
-                        players_ids.append(item[0])
-                        players_ids.append(row[0])
-                        pair = (row[0], row[1], row[2], item[0], item[1], item[2])
-                        pairings.append(pair)
-                        break
-        return pairings
+            team_counts.append(row[0])
+        
+        cur.close()
+        conn.close()
+        
+        if all_same(team_counts):
+            # if there are equal number of players then we can pair the 
+            # players.
+            query = """ SELECT id, first_name, last_name, team_id 
+                        FROM swiss_tournament.player_standings
+                        WHERE tournament_id = %s"""
+            data = (tournamentId,)
+            conn = connect()
+            cur = conn.cursor()
+            cur.execute(query, data)
+            players = []
+            for row in cur.fetchall():
+                players.append(list(row))
+        
+            pairings = []
+            players_ids = []
+            for index, row in enumerate(players):
+                if(row[0] not in players_ids):
+                    for item in players[index+1:]:
+                        if(row[2] != item[2] and (item[0] not in players_ids)):
+                            players_ids.append(item[0])
+                            players_ids.append(row[0])
+                            pair = (row[0], row[1], row[2], item[0], item[1], item[2])
+                            pairings.append(pair)
+                            break
+            return pairings 
+        else:
+            raise ValueError("Players in each team are not equal")
+    
+    else:
+        raise ValueError("There are odd numbers of teams")
+    
+    
 
 
+
+
+def all_same(items):
+    return all(x == items[0] for x in items)
 
 
 
