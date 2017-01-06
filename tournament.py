@@ -524,6 +524,45 @@ def swissPairings( tournamentId):
     
 
 
+def isTournament(tournamentId):
+    query = """SELECT id, name
+               FROM swiss_tournament.tournament t
+               WHERE id = %s;
+            """
+    data = (tournamentId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    id_list = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()  
+    if id_list:
+        return id_list
+    else:
+        return False
+    
+
+
+
+def displayTournaments():
+    query = """SELECT t.id, t.name, t.start_date,  c1.name
+               FROM swiss_tournament.tournament t 
+	       INNER JOIN swiss_tournament.country c1 ON ( t.origin_country = c1.id  )  
+                """
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query)
+    id_list = cur.fetchall()
+    conn.commit()
+    cur.close()
+    conn.close() 
+    return id_list 
+    
+    
+    
+
+
 
 
 def all_same(items):
