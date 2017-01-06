@@ -205,13 +205,38 @@ def countPlayers(tournamentId):
     
 def registerCountry(name):
     "Registers the country names belonging to various participating teams and players"
+    
+    query = """SELECT name
+               FROM swiss_tournament.country y;"""
+    
     conn = connect()
     cur = conn.cursor()
-    query = "INSERT INTO swiss_tournament.country( name) VALUES ( %s ) RETURNING id;"
-    cur.execute(query, (name, ))
-    country_id = cur.fetchone()[0]
-    conn.commit()
+    cur.execute()
+    country_list = cur.fetchall()
+    cur.close()
     conn.close()
+    
+    countryExists = False
+    for row in coutry_list:
+        if name == row[0]:
+            countryExists = True
+            break
+    if countryExists:
+        query = """SELECT id
+                   FROM swiss_tournament.country y
+                   WHERE name = %s; """
+        data = (lower(name.title()),)
+        cur.execute(query, data)
+        country_id = cur.fetchone()[0]
+        conn.commit()
+        conn.close()        
+    else:
+        query = "INSERT INTO swiss_tournament.country( name) VALUES ( %s ) RETURNING id;"
+        cur.execute(query, (name.title(), ))
+        country_id = cur.fetchone()[0]
+        conn.commit()
+        conn.close()        
+        
     return country_id    
     
     
