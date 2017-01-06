@@ -439,7 +439,7 @@ def reportMatch(winner, loser, matchId):
     
  
  
-def swissPairings():
+def swissPairings( tournamentId):
     """Returns a list of pairs of players for the next round of a match.
   
     Assuming that there are an even number of players registered, each player
@@ -454,11 +454,50 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+    
+    query = """SELECT count(id)
+               FROM swiss_tournament.player_standings
+	       WHERE tournament_id = %s
+	       GROUP BY team_id;"""
+    data = (tournamentId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    
+    team_counts = []
+    for row in cur.fetchall():
+        team_counts.append(row[0])
+        
+    cur.close()
+    conn.close()
+    
+    if all_same(team_counts):
+        query = """ SELECT id, first_name, last_name, team_id 
+                    FROM swiss_tournament.player_standings
+                    WHERE tournament_id = %s"""
+        data = (tournamentId,)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        players = []
+        for row in cur.fetchall():
+            players.append(list(row))
+            
+        pairings = []
+        players_ids = []
+        for index, row in enumerate(players):
+            if(row[0] not in players_ids):
+                for item in players[index+1:]:
+                    if(row[2] != item[2] and (item[0] not in players_ids)):
+                        players_ids.append(item[0])
+                        players_ids.append(row[0])
+                        pair = (row[0], row[1], row[2], item[0], item[1], item[2])
+                        pairings.append(pair)
+                        break
+        return pairings
 
 
 
-def totalPoints(wins, draws):
-    total = (wins * 3) + (draws * 1)
-    return total
+
 
 
