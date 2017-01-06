@@ -461,15 +461,14 @@ def swissPairings( tournamentId):
     query = """SELECT count(id)
              FROM swiss_tournament.teams s
              WHERE tournament_id = %s;"""
-    data = (tournamentId)
+    data = (tournamentId,)
     conn = connect()
     cur = conn.cursor()
     cur.execute(query, data)
-    count = cur.fetone()[0][0]
+    count = cur.fetchone()
     cur.close()
     conn.close() 
-    
-    if (int(count) % 2 == 0):
+    if (int(count[0]) % 2 == 0):
         # If there are even number of teams. Then we need to check if 
         # there are equal number of players in each team. The following
         # query fetches the number of players in each team.
