@@ -169,29 +169,46 @@ def testPairings():
     """
     deleteAllMatches()
     deletePlayers()
-    registerPlayer("Twilight Sparkle")
-    registerPlayer("Fluttershy")
-    registerPlayer("Applejack")
-    registerPlayer("Pinkie Pie")
-    registerPlayer("Rarity")
-    registerPlayer("Rainbow Dash")
-    registerPlayer("Princess Celestia")
-    registerPlayer("Princess Luna")
-    standings = playerStandings()
+    deleteTeams()
+    deleteTournament()
+    deleteCountry()
+    country_id = registerCountry("India")
+    start_date = datetime.date.today()
+    tournament_id = registerTournament('Test', start_date , country_id) 
+    team_a = registerTeam('Test Team 2', tournament_id, country_id)
+    team_b = registerTeam('Test Team 3', tournament_id, country_id)
+    team_c = registerTeam('Test Team 4', tournament_id, country_id)
+    team_d = registerTeam('Test Team 5', tournament_id, country_id)    
+    
+    registerPlayer("Twilight Sparkle", team_a)
+    registerPlayer("Fluttershy", team_b)
+    registerPlayer("Applejack", team_c)
+    registerPlayer("Pinkie Pie", team_d)
+    registerPlayer("Rarity", team_a)
+    registerPlayer("Rainbow Dash", team_b)
+    registerPlayer("Princess Celestia", team_c)
+    registerPlayer("Princess Luna", team_d)
+    standings = playerStandings(tournament_id)
     [id1, id2, id3, id4, id5, id6, id7, id8] = [row[0] for row in standings]
-    pairings = swissPairings()
+    pairings = swissPairings(tournament_id)
     if len(pairings) != 4:
         raise ValueError(
             "For eight players, swissPairings should return 4 pairs. Got {pairs}".format(pairs=len(pairings)))
-    reportMatch(id1, id2)
-    reportMatch(id3, id4)
-    reportMatch(id5, id6)
-    reportMatch(id7, id8)
-    pairings = swissPairings()
+    mi1 = registerMatch(tournament_id, id1, id2, start_date)
+    mi2 = registerMatch(tournament_id, id3, id4, start_date)
+    mi3 = registerMatch(tournament_id, id5, id6, start_date)
+    mi4 = registerMatch(tournament_id, id7, id8, start_date)
+    reportMatch(id1, id2, mi1)
+    reportMatch(id3, id4, mi2)
+    reportMatch(id5, id6, mi3)
+    reportMatch(id7, id8, mi4)
+    pairings = swissPairings(tournament_id)
+    
     if len(pairings) != 4:
         raise ValueError(
             "For eight players, swissPairings should return 4 pairs. Got {pairs}".format(pairs=len(pairings)))
-    [(pid1, pname1, pid2, pname2), (pid3, pname3, pid4, pname4), (pid5, pname5, pid6, pname6), (pid7, pname7, pid8, pname8)] = pairings
+    
+    [(pid1, fname1, lname1, pid2, fname2, lname2), (pid3, fname3, lname3, pid4, fname4, lname4), (pid5, fname5, lname5, pid6, fname6, lname6), (pid7, fname7, lname7, pid8, fname8, lname8)] = pairings
     possible_pairs = set([frozenset([id1, id3]), frozenset([id1, id5]),
                           frozenset([id1, id7]), frozenset([id3, id5]),
                           frozenset([id3, id7]), frozenset([id5, id7]),
