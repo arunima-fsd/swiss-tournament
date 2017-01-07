@@ -1,4 +1,3 @@
-import datetime
 import texttable as tt
 import math
 from tournament import *
@@ -11,15 +10,17 @@ def welcomeScreen():
     tournamentChoice()
 
 
-
-
-
+###############################################################################
 
 def tournamentOptions(choice):
+    """It handles each option entered by user in tournament menu. """
+    
+    #Creates a new tournament
     if choice == '1':
         createTournament()
         tournamentChoice()
-
+        
+    #Allows to workon existing tournament.
     elif choice == '2':
         while(True):
             try:
@@ -36,12 +37,19 @@ def tournamentOptions(choice):
             print "*** No tournament with id = %s exists."%(tournamentId)
             tournamentChoice()
             
+    #Shows the tournament table       
     elif choice == '3':
         showTournaments()
         tournamentChoice()
         
+    #Helps deleting the tournament   
     elif choice == '4':
-        tournamentId = raw_input("**** Enter the tournament Id you want to delete")
+        while(True):
+            try:
+                tournamentId = int(raw_input("*** Enter your tournament ID: "))
+                break
+            except ValueError:
+                print "Oops!  That was no valid number.  Try again..."
         delete_tournament(tournamentId)
         
     elif choice == '5':
@@ -63,14 +71,18 @@ def tournamentOptions(choice):
         
         
 def teamOptions(choice, tournamentId):
+    """Handles the user choice from team menu"""
+    #Creates team
     if choice == '1':
         createTeam(tournamentId)
         teamsChoice(tournamentId)
         
+    #Displays existing team   
     elif choice == '2':
         showTeams(tournamentId)
         teamsChoice(tournamentId)
         
+    #Deletes one particular team  
     elif choice == '3':
         teamId = raw_input("*** Enter the ID of the team you wish to delete. ")
         if isTeam(teamId):
@@ -80,19 +92,23 @@ def teamOptions(choice, tournamentId):
         else:
             print "*** No such team exists. "
             teamsChoice(tournamentId)
+            
+    #Delets all the team from this tournament.
     elif choice == '4':
         if isTournament(tournamentId):
             deleteTeams(tournamentId)
-            print "*** Successfully deleted the team."
+            print "*** Successfully deleted all the teams."
             teamsChoice(tournamentId)            
             
         else:
             print "*** No such tournament exists. "
             teamsChoice(tournamentId) 
             
+    #Presents Player Menu        
     elif choice == '5':
         playersChoice(tournamentId)
         
+    #Presents tournament Menu    
     elif choice == '6':
         tournamentChoice()
     else: 
@@ -103,6 +119,8 @@ def teamOptions(choice, tournamentId):
 
 
 def playerOptions(choice, tournamentId):
+    """Handles each input from Player menu"""
+    #Registers a player
     if choice == '1':
         name = raw_input("*** Enter player's full name. (<first name> <last name>): ")
         
@@ -124,11 +142,13 @@ def playerOptions(choice, tournamentId):
             
         print ("*** %s is successfully registered. ")%(name.title())
         playersChoice(tournamentId)
-        
+    
+    #Displays all the players in the tournament in order of there progress.  
     elif choice == '2':
         showPlayers(tournamentId)
         playersChoice(tournamentId)
-    
+        
+    #Delete particular player
     elif choice == '3':
         while(True):
             try:
@@ -143,14 +163,17 @@ def playerOptions(choice, tournamentId):
             print "*** No such player exists. "
         playersChoice(tournamentId)
         
+    #Delete all the players from the tournament    
     elif choice == '4':
         deletePlayers(tournamentId)
         print "*** Successful Deletion"
         playersChoice(tournamentId)
-    
+        
+    #Navigate to match menu
     elif choice == '5':
         matchesChoice(tournamentId)
-    
+        
+    #Navigate to team Menu
     elif choice == '6':
         teamsChoice(tournamentId)
     
@@ -161,10 +184,12 @@ def playerOptions(choice, tournamentId):
 
 
 def matchesOptions(choice, tournamentId):
+    #Displays all the matches status and schedule
     if choice == '1':
         showMatchesSchedule(tournamentId)
         matchesChoice(tournamentId)
         
+    #Helps reposrting a match result   
     elif choice == '2':
         if isScheduleExists(tournamentId):
             result = raw_input("Hit 'D' if match is draw else hit 'N' ")
@@ -190,7 +215,12 @@ def matchesOptions(choice, tournamentId):
             print "**** Please Schedule the matches first"
         matchesChoice(tournamentId)
 
-    
+    #Schedule matches for a particular round
+    #Checks if the round is already scheduled.
+    #Checks if the round is yet not finished and
+    #results are awaited for few matches
+    #Checks if user exceeds the number of rounds 
+    # allowed i.e., log(total_players)
     elif choice == '3':
         playersCount = countPlayers(tournamentId)
         max_round = math.ceil(math.log(playersCount,2))
@@ -226,6 +256,7 @@ def matchesOptions(choice, tournamentId):
             
         matchesChoice(tournamentId)
         
+    #Deletes particular match
     elif choice == '4':
         while(True):
             try:
@@ -239,11 +270,14 @@ def matchesOptions(choice, tournamentId):
         else:
             print "*** Invalid Match Id"
         matchesChoice(tournamentId)
+        
+    #Deletes all the matches
     elif choice == '5':
         deleteMatches(tournamentId)
         print "*** Successfully deleted all the matches."
         matchesChoice(tournamentId)
-            
+        
+    #Player Menu        
     elif choice == '6':
         playersChoice(tournamentId)
     
@@ -263,6 +297,7 @@ def matchesOptions(choice, tournamentId):
 
 
 def createTournament():
+    """Creates tournament"""
     name = raw_input("*** Please enter the tournament name. ")
     start_date = raw_input("*** Please enter the start date of the tournament. (yyyy-mm-dd) ")
     country = raw_input("*** Please enter the country name of the venue. ")
@@ -277,6 +312,7 @@ def createTournament():
 
 
 def createTeam(tournament_id):
+    """Creates team"""
     name = raw_input("*** Please enter the team name. ")
     country = raw_input("*** Please enter the country it represents. ")
     country_id = registerCountry(country)
@@ -288,6 +324,7 @@ def createTeam(tournament_id):
         
 
 def createMatches(tournamentId, round_no):
+    """Creates Matches"""
     if scheduleMatches(tournamentId, round_no):
         print "*** Matches Scheduled Successfully"
     else:
@@ -295,6 +332,7 @@ def createMatches(tournamentId, round_no):
     
 
 def createMatchReport():
+    """Reports match"""
     while(True):
         while(True):
             try:
@@ -337,6 +375,7 @@ def createMatchReport():
     
     
 def showTournaments():
+    """Displays tournament table"""
     tournament_list = displayTournaments()
     if(tournament_list):
         tab = tt.Texttable()
@@ -358,7 +397,7 @@ def showTournaments():
         
         
 def showTeams(tournamentId):
-    
+    """Display teams table"""
     team_list = displayTeams(tournamentId)
     if(team_list):
         tab = tt.Texttable()
@@ -376,6 +415,7 @@ def showTeams(tournamentId):
         
 
 def showPlayers(tournamentId):
+    """Displays players standings"""
     players_list = displayPlayers(tournamentId)
     if(players_list):
         tab = tt.Texttable()
@@ -394,6 +434,7 @@ def showPlayers(tournamentId):
     
     
 def showMatchesSchedule(tournamentId):
+    """Displays scheduled matches"""
     matches_list = displayMatches(tournamentId)
     if(matches_list):
         tab = tt.Texttable()
@@ -439,10 +480,11 @@ def delete_tournament(tournamentId = None):
 # ##################################################################
 
 def tournamentChoice():
+    """Tournament MENU"""
     print "-" * 80
     print "*** 1. CREATE  NEW tournament."
     print "*** 2. WORK on EXISTING tournament."
-    print "*** 3. BROWSE existing tournaments."
+    print "*** 3. DISPLAY existing tournaments."
     print "*** 4. DELETE a tournament."
     print "*** 5. DELETE ALL the tournaments "
     print "-" * 80
@@ -452,9 +494,10 @@ def tournamentChoice():
     
 
 def teamsChoice(tournamentId):
+    """TEAM MENU"""
     print "-" * 80
     print "*** 1. CREATE a new team."
-    print "*** 2. BROWSE existing teams."
+    print "*** 2. DISPLAY existing teams."
     print "*** 3. DELETE a team."
     print "*** 4. DELETE ALL teams of one particular tournament."
     print "*** 5. PLAYERS menu"
@@ -465,9 +508,10 @@ def teamsChoice(tournamentId):
 
 
 def playersChoice(tournamentId):
+    """PLAYERS MENU"""
     print "-" * 80
     print "*** 1. REGISTER a player in some team."
-    print "*** 2. BROWSE existing players"
+    print "*** 2. DISPLAY player's standings."
     print "*** 3. DELETE ONE player"
     print "*** 4. DELETE ALL players"
     print "*** 5. MATCHES Menu "
@@ -479,6 +523,7 @@ def playersChoice(tournamentId):
 
 
 def matchesChoice(tournamentId):
+    """MATCHES MENU"""
     print "-" * 80
     print "*** 1. MATCH SCHEDULE"
     print "*** 2. REGISTER match RESULT"

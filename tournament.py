@@ -15,6 +15,7 @@ def connect():
 
 def deleteTournament(tournamentId = None):
     """Remove all or some tournaments records"""
+    
     if tournamentId:
         query = """DELETE FROM swiss_tournament.tournament
                            WHERE id = %s;"""
@@ -61,6 +62,9 @@ def deleteTeams(tournamentId = None):
        
     
 def deleteOneTeam(teamId):
+    """Deltes one team from the database. Also this action will
+    automatically deletes any players registered under it."""
+    
     query = """DELETE FROM swiss_tournament.teams
                WHERE id = %s;"""
     data = (teamId,)
@@ -261,11 +265,12 @@ def countPlayers(tournamentId):
     
     return player_count
     
-    
+# ###############################################################################    
     
     
 def registerCountry(name):
-    "Registers the country names belonging to various participating teams and players"
+    """Registers the country names belonging to various participating teams and players.
+       It also keeps a check on registering same country again."""
     
     query = """SELECT name
                FROM swiss_tournament.country y;"""
@@ -276,9 +281,10 @@ def registerCountry(name):
     country_list = cur.fetchall()
     cur.close()
     conn.close()
+    countryExists = False
     
+    #check if country already exists
     if country_list:
-        countryExists = False
         for row in country_list:
             if name == row[0]:
                 countryExists = True
@@ -357,9 +363,10 @@ def registerPlayer(name, team_id):
     Args:
       name: the player's full name (need not be unique).
     """
-    
+    # Splitting the full name in first name and last name
     full_name = name.split()
     first_name = full_name[0]
+    
     if len(full_name) == 2:
         last_name = full_name[1]
         query = "INSERT INTO swiss_tournament.player_info( first_name, last_name, team_id) VALUES (  %s, %s, %s ) RETURNING id;"
@@ -405,7 +412,7 @@ def registerMatch(tournament_id, first_player, second_player, match_date):
     return match_id
     
     
-
+# ###################################################################################################
 
 def playerStandings(tournament_id):
     """Returns a list of the players and their win records, sorted by wins.
@@ -442,6 +449,7 @@ def reportMatch(matchId, winner=None, loser=None):
     """Records the outcome of a single match between two players.
 
     Args:
+      matchId: Id of the match
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
       
@@ -667,6 +675,7 @@ def isTournament(tournamentId):
 
 def isTeam(teamId):
     """ Checks if a particular team exists. """
+    
     query = """SELECT *
                FROM swiss_tournament.teams t
                WHERE id = %s;
@@ -682,9 +691,11 @@ def isTeam(teamId):
         return True
     else:
         return False
+    
 
 def isPlayer(playerId):
     """ Checks if a particular player exists. """
+    
     query = """SELECT *
                FROM swiss_tournament.player_info t
                WHERE id = %s;
@@ -703,7 +714,8 @@ def isPlayer(playerId):
 
 
 def isMatch(matchId):
-    """ Checks if a particular player exists. """
+    """ Checks if a particular match exists. """
+    
     query = """SELECT * 
                FROM swiss_tournament.match_schedule e
                WHERE id = %s;
@@ -724,6 +736,8 @@ def isMatch(matchId):
 # ###################################################################################
 
 def displayTournaments():
+    """ This method fetches Tournament details."""
+    
     query = """SELECT t.id, t.name, t.start_date,  c1.name
                FROM swiss_tournament.tournament t 
 	       INNER JOIN swiss_tournament.country c1 ON ( t.origin_country = c1.id  )  
@@ -739,6 +753,8 @@ def displayTournaments():
     
     
 def displayTeams(tournamentId):
+    """This function fetches teams information."""
+    
     query = """SELECT t.id, t.name, c1.name
                FROM swiss_tournament.teams t 
                INNER JOIN swiss_tournament.country c1 
@@ -758,6 +774,7 @@ def displayTeams(tournamentId):
 
 
 def displayPlayers(tournamentId):
+    """Fetches player standings from view."""
     conn = connect()
     cur = conn.cursor()
     query = """ SELECT id, first_name, last_name, team_id, matches, wins, losses, draws, total_points
@@ -775,6 +792,8 @@ def displayPlayers(tournamentId):
 
 
 def displayMatches(tournamentId):
+    """Fetches Matches information"""
+    
     conn = connect()
     cur = conn.cursor()
     query = """SELECT ms.id, ms.first_player, pi.first_name , pi.last_name, ms.second_player,
@@ -800,7 +819,7 @@ def displayMatches(tournamentId):
 
 
 def scheduleMatches(tournamentId, round_no):
-    "Tested"
+    "This function helps in scheduling matches for each round."
     pairs = swissPairings(tournamentId)
     if pairs:
         id_pairs = []
@@ -826,7 +845,7 @@ def scheduleMatches(tournamentId, round_no):
         
  
 def getAllRounds(tournamentId):
-    "Tested"
+    "This function fetches all the round numbers for which the matches are already scheduled."
     query = """SELECT e."round"
                FROM swiss_tournament.match_schedule e
                WHERE tournament_id = %s
@@ -844,7 +863,10 @@ def getAllRounds(tournamentId):
 
 
 def isRoundFinished(tournamentId):
-    "Tested"
+    """Checks if all the matches in a particular round
+       is finished. This helps in decide if we can proceed 
+       to pair players for next round."""
+    
     query = """SELECT isfinished 
                FROM swiss_tournament.match_schedule e
                WHERE tournament_id = %s
@@ -865,6 +887,10 @@ def isRoundFinished(tournamentId):
     
 
 def isScheduleExists(tournamentId):
+    """Checks if the schedule for some tournament is 
+       made or not. This helps prevent the user to enter
+       the match result even before any schedule registered."""
+    
     query = """SELECT *
                FROM  swiss_tournament.match_schedule e
                WHERE tournament_id = %s;"""
