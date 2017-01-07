@@ -12,6 +12,7 @@ def connect():
 
 
 
+
 def deleteTournament(tournamentId = None):
     """Remove all or some tournaments records"""
     if tournamentId:
@@ -56,7 +57,8 @@ def deleteTeams(tournamentId = None):
         conn.commit()
         cur.close()
         conn.close()        
-        
+   
+       
     
 def deleteOneTeam(teamId):
     query = """DELETE FROM swiss_tournament.teams
@@ -74,15 +76,27 @@ def deleteOneTeam(teamId):
     
 
     
-def deletePlayers():
+def deletePlayers(tournamentId, playerId = None):
     """Remove all the player records from the database."""
     
-    conn = connect()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM swiss_tournament.player_info;")
-    conn.commit()
-    cur.close()
-    conn.close()
+    if playerId:
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM swiss_tournament.player_info WHERE id = %s;",(playerId,))
+        conn.commit()
+        cur.close()
+        conn.close() 
+    else:
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute("""DELETE FROM swiss_tournament.player_info pi 
+                       WHERE id IN (SELECT pi.id 
+                                    FROM swiss_tournament.player_info pi 
+	                            INNER JOIN swiss_tournament.teams t ON ( pi.team_id = t.id  ) 
+	                            WHERE tournament_id  = %s); """, (tournamentId,))
+        conn.commit()
+        cur.close()
+        conn.close()
     
 
 
@@ -125,6 +139,7 @@ def deleteMatches(tournamentId, matchId = None):
             cur.close()
             conn.close() 
             
+            conn = connect()
             query = """UPDATE swiss_tournament.player_stats SET draws = draws - 1,
                        total_points = total_points - 1
                        WHERE id IN(%s, %s);"""
@@ -146,10 +161,10 @@ def deleteMatches(tournamentId, matchId = None):
             row = cur.fetchone()
             winner = row[0]
             loser = row[1]
-            conn.commit()
             cur.close()
             conn.close()
             conn = connect()
+            
             query = """UPDATE swiss_tournament.player_stats
                        SET  wins = CASE 
                        WHEN id = %s THEN wins - 1
@@ -423,7 +438,7 @@ def playerStandings(tournament_id):
     
 
 
-def reportMatch(winner, loser, matchId):
+def reportMatch(matchId, winner=None, loser=None):
     """Records the outcome of a single match between two players.
 
     Args:
@@ -476,6 +491,8 @@ def reportMatch(winner, loser, matchId):
         conn.commit()
         cur.close()
         conn.close()
+        
+        
     else:
         
         # In case, match is draw then 'isDraw' column of 'match' relation
@@ -483,15 +500,30 @@ def reportMatch(winner, loser, matchId):
         # hence, winner is null
         
         query = """INSERT INTO swiss_tournament."match"
-                         ( id, winner) VALUES ( %s);"""
+                         ( id, is_draw) VALUES ( %s, %s);"""
                 
-        data = (matchId)
+        data = (matchId, True)
         conn = connect()
         cur = conn.cursor()
         cur.execute(query, data)
         conn.commit()
         cur.close()
-        conn.close()        
+        conn.close() 
+        
+        query = """SELECT first_player, second_player
+                   FROM swiss_tournament.match_schedule e
+                   WHERE id = %s;"""
+        data = (matchId,)
+        conn = connect()
+        cur = conn.cursor()
+        cur.execute(query, data)
+        pair = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        winner = pair[0]
+        loser = pair[1]
+        
         
         query = """UPDATE swiss_tournament.player_stats
                 SET  draws = CASE 
@@ -504,13 +536,22 @@ def reportMatch(winner, loser, matchId):
                     END
                 WHERE id IN(%s, %s);
                 """        
-        data = (winner, loser, winner, loser, winner, loser, winner, loser)
+        data = (winner, loser, winner, loser, winner, loser)
         conn = connect()
         cur = conn.cursor()
         cur.execute(query, data)
         conn.commit()
         cur.close()
-        conn.close()        
+        conn.close()  
+    
+    query = "UPDATE swiss_tournament.match_schedule SET isfinished = True where id = %s ;"
+    data = (matchId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    conn.commit()
+    cur.close()
+    conn.close()    
         
     
     
@@ -593,15 +634,20 @@ def swissPairings( tournamentId):
                             break
             return pairings 
         else:
-            raise ValueError("Players in each team are not equal")
+            print "Operation denied. Players in each team are not equal"
     
     else:
-        raise ValueError("There are odd numbers of teams")
+        print "Operation denied. There are odd numbers of teams"
+    
+
     
     
+# ##########################################################################################
 
 
 def isTournament(tournamentId):
+    """ Checks if a particular tournament exists."""
+    
     query = """SELECT id, name
                FROM swiss_tournament.tournament t
                WHERE id = %s;
@@ -611,7 +657,6 @@ def isTournament(tournamentId):
     cur = conn.cursor()
     cur.execute(query, data)
     id_list = cur.fetchone()
-    conn.commit()
     cur.close()
     conn.close()  
     if id_list:
@@ -620,7 +665,63 @@ def isTournament(tournamentId):
         return False
     
 
+def isTeam(teamId):
+    """ Checks if a particular team exists. """
+    query = """SELECT *
+               FROM swiss_tournament.teams t
+               WHERE id = %s;
+            """
+    data = (teamId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    id_list = cur.fetchone()
+    cur.close()
+    conn.close()  
+    if id_list:
+        return True
+    else:
+        return False
 
+def isPlayer(playerId):
+    """ Checks if a particular player exists. """
+    query = """SELECT *
+               FROM swiss_tournament.player_info t
+               WHERE id = %s;
+            """
+    data = (playerId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    id_list = cur.fetchone()
+    cur.close()
+    conn.close()  
+    if id_list:
+        return True
+    else:
+        return False
+
+
+def isMatch(matchId):
+    """ Checks if a particular player exists. """
+    query = """SELECT * 
+               FROM swiss_tournament.match_schedule e
+               WHERE id = %s;
+            """
+    data = (matchId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    id_list = cur.fetchone()
+    cur.close()
+    conn.close()  
+    if id_list:
+        return True
+    else:
+        return False
+
+
+# ###################################################################################
 
 def displayTournaments():
     query = """SELECT t.id, t.name, t.start_date,  c1.name
@@ -656,8 +757,131 @@ def displayTeams(tournamentId):
     
 
 
+def displayPlayers(tournamentId):
+    conn = connect()
+    cur = conn.cursor()
+    query = """ SELECT id, first_name, last_name, team_id, matches, wins, losses, draws, total_points
+                FROM swiss_tournament.player_standings
+                WHERE tournament_id = %s """
+    data = (tournamentId,)
+    cur.execute(query, data)
+    players_list = []
+    for row in cur.fetchall():
+        players_list.append(row)
+        
+    cur.close()
+    conn.close()
+    return players_list  
 
 
+def displayMatches(tournamentId):
+    conn = connect()
+    cur = conn.cursor()
+    query = """SELECT ms.id, ms.first_player, pi.first_name , pi.last_name, ms.second_player,
+                      pi1.first_name, pi1.last_name,  ms.match_date, ms.isfinished
+               FROM swiss_tournament.match_schedule ms 
+	       INNER JOIN swiss_tournament.player_info pi ON ( ms.first_player = pi.id  )  
+	       INNER JOIN swiss_tournament.player_info pi1 ON ( ms.second_player = pi1.id  )  
+               WHERE tournament_id = %s"""
+    data = (tournamentId,)
+    cur.execute(query, data)
+    matches_list = []
+    for row in cur.fetchall():
+        matches_list.append(row)
+            
+    cur.close()
+    conn.close()
+    return matches_list     
+    
+
+    
+
+# #########################################################################
+
+
+def scheduleMatches(tournamentId, round_no):
+    "Tested"
+    pairs = swissPairings(tournamentId)
+    if pairs:
+        id_pairs = []
+        for pair in pairs:
+            mod_pair = [pair[0], pair[3]]
+            id_pairs.append(mod_pair)
+        
+        query = """INSERT INTO swiss_tournament.match_schedule
+                    ( tournament_id, first_player, second_player, round) 
+                    VALUES ( %s, %s, %s, %s);"""
+        for row in id_pairs:
+            data = (tournamentId, row[0], row[1], round_no)
+            conn = connect()
+            cur = conn.cursor()
+            cur.execute(query, data)
+            conn.commit()
+            cur.close()
+            conn.close()          
+        return True
+    else:
+        return False
+    
+        
+ 
+def getAllRounds(tournamentId):
+    "Tested"
+    query = """SELECT e."round"
+               FROM swiss_tournament.match_schedule e
+               WHERE tournament_id = %s
+               GROUP BY e."round";"""
+    data = (tournamentId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    round_no = cur.fetchall()
+    conn.commit()
+    cur.close()
+    conn.close()   
+    return round_no
+
+
+
+def isRoundFinished(tournamentId):
+    "Tested"
+    query = """SELECT isfinished 
+               FROM swiss_tournament.match_schedule e
+               WHERE tournament_id = %s
+               ORDER BY id DESC 
+               LIMIT 1;"""
+    data = (tournamentId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    finished = cur.fetchall()
+    conn.commit()
+    cur.close()
+    conn.close()
+    if finished:
+        return finished[0][0]
+    else:
+        return False
+    
+
+def isScheduleExists(tournamentId):
+    query = """SELECT *
+               FROM  swiss_tournament.match_schedule e
+               WHERE tournament_id = %s;"""
+    data = (tournamentId,)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(query, data)
+    finished = cur.fetchall()
+    conn.commit()
+    cur.close()
+    conn.close()    
+    if finished:
+        print finished
+        return True
+    else:
+        return False
+    
 def all_same(items):
     return all(x == items[0] for x in items)
 
