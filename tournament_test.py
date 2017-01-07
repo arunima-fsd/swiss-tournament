@@ -15,8 +15,7 @@ def testCount():
              player count after 1 and 2 players registered,
              player count after players deleted.
     """
-    deleteAllMatches()
-    deletePlayers()
+    
     country_id = registerCountry("India")
     start_date = datetime.date.today()
     tournament_id = registerTournament('Test', start_date , country_id)
@@ -48,15 +47,15 @@ def testCount():
             "After two players register, countPlayers() should be 2. Got {c}".format(c=c))
     print "3. countPlayers() returns 2 after two players are registered."
     
-    deletePlayers()
+    deletePlayers(tournament_id)
     c = countPlayers(tournament_id)
     if c != 0:
         raise ValueError(
             "After deletion, countPlayers should return zero.")
     print "4. countPlayers() returns zero after registered players are deleted.\n5. Player records successfully deleted."
-    deleteTeams()
+    
     deleteTournament()
-    deleteCountry()
+       
     
     
     
@@ -67,8 +66,7 @@ def testStandingsBeforeMatches():
     Test to ensure players are properly represented in standings prior
     to any matches being reported.
     """
-    deleteAllMatches()
-    deletePlayers()
+    
     country_id = registerCountry("India")
     start_date = datetime.date.today()
     tournament_id = registerTournament('Test', start_date , country_id) 
@@ -96,7 +94,8 @@ def testStandingsBeforeMatches():
                          "even if they have no matches played.")
     print "6. Newly registered players appear in the standings with no matches."
     
-    
+    deleteAllMatches()
+    deletePlayers(tournament_id)    
     
     
     
@@ -106,11 +105,9 @@ def testReportMatches():
     Test that matches are reported properly.
     Test to confirm matches are deleted properly.
     """
-    deleteAllMatches()
-    deletePlayers()
-    deleteTeams()
+    
     deleteTournament()
-    deleteCountry()
+    
     country_id = registerCountry("India")
     start_date = datetime.date.today()
     tournament_id = registerTournament('Test', start_date , country_id) 
@@ -129,8 +126,8 @@ def testReportMatches():
     match_id2 = registerMatch(tournament_id, id3, id4, start_date)
     
     
-    reportMatch(id1, id2, match_id1)
-    reportMatch(id3, id4, match_id2)
+    reportMatch(match_id1, id1, id2)
+    reportMatch(match_id2, id3, id4)
     
     standings = playerStandings(tournament_id)
     
@@ -167,11 +164,9 @@ def testPairings():
     """
     Test that pairings are generated properly both before and after match reporting.
     """
-    deleteAllMatches()
-    deletePlayers()
-    deleteTeams()
+    
     deleteTournament()
-    deleteCountry()
+    
     country_id = registerCountry("India")
     start_date = datetime.date.today()
     tournament_id = registerTournament('Test', start_date , country_id) 
@@ -198,10 +193,10 @@ def testPairings():
     mi2 = registerMatch(tournament_id, id3, id4, start_date)
     mi3 = registerMatch(tournament_id, id5, id6, start_date)
     mi4 = registerMatch(tournament_id, id7, id8, start_date)
-    reportMatch(id1, id2, mi1)
-    reportMatch(id3, id4, mi2)
-    reportMatch(id5, id6, mi3)
-    reportMatch(id7, id8, mi4)
+    reportMatch(mi1, id1, id2)
+    reportMatch(mi2, id3, id4)
+    reportMatch(mi3, id5, id6)
+    reportMatch(mi4, id7, id8)
     pairings = swissPairings(tournament_id)
     
     if len(pairings) != 4:
