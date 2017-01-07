@@ -11,7 +11,7 @@ CREATE SCHEMA swiss_tournament;
 -- 'country' stores the country names belonging to various teams and tournaments.
 CREATE TABLE swiss_tournament.country ( 
         id                   serial  NOT NULL,
-        name                 char(60)  NOT NULL,
+        name                 varchar(60)  NOT NULL,
         CONSTRAINT pk_country PRIMARY KEY ( id )
  );
 
@@ -47,8 +47,8 @@ CREATE INDEX idx_team_info ON swiss_tournament.teams ( tournament_id );
 -- 'player_info' table reflects the basic information about a player at the time of registration in the tournament.
 CREATE TABLE swiss_tournament.player_info ( 
         id                   serial  NOT NULL,
-        first_name           char(50)  NOT NULL,
-        last_name            char(50)  ,
+        first_name           varchar(50)  NOT NULL,
+        last_name            varchar(50)  ,
         team_id              integer  NOT NULL,
         CONSTRAINT pk_player_info PRIMARY KEY ( id ),
         CONSTRAINT fk_player_info_teams FOREIGN KEY ( team_id ) REFERENCES swiss_tournament.teams( id ) ON DELETE CASCADE ON UPDATE CASCADE
@@ -82,7 +82,7 @@ CREATE TABLE swiss_tournament.match_schedule (
         first_player         integer  NOT NULL,
         second_player        integer  NOT NULL,
         match_date           date  ,
-        round                integer  ,
+        round                integer DEFAULT 0 NOT NULL ,
         isfinished           bool DEFAULT False ,
         CONSTRAINT pk_match_schedule PRIMARY KEY ( id ),
         CONSTRAINT fk_match_schedule_player_info FOREIGN KEY ( first_player ) REFERENCES swiss_tournament.player_info( id ) ON DELETE CASCADE ON UPDATE CASCADE,
